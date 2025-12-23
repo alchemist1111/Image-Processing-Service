@@ -11,8 +11,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
+from .logging import LOGGING
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +30,9 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+
+if not SECRET_KEY:
+    raise ImproperlyConfigured("The SECRET_KEY setting must not be empty.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
@@ -45,20 +52,39 @@ INSTALLED_APPS = [
     
     # Local apps
     'image_service',
+    'image_management',
+    'transformations',
     
     # Third-party apps
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'django_filters',
+    'corsheaders',
+    'drf_yasg',
     
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
+if 'docker' in sys.argv:
+    INTERNAL_IPS = [
+        '127.0.0.1',       # Localhost
+        'host.docker.internal',  # Docker's internal network address (works on Mac/Windows)
+    ]
+else:
+    INTERNAL_IPS = [
+        '127.0.0.1',
+    ]
 
 ROOT_URLCONF = 'image_service.urls'
 
@@ -124,8 +150,54 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
+STATIC_URL = '/static/'
 
-STATIC_URL = 'static/'
+# Directory where collected static files are stored
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional static files directory (for development)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # Optional for custom static files during development
+]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# --- Custom User Model ---
+AUTH_USER_MODEL = "users.User"
+
+
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # CORS config
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+
+# DRF config
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# Simple JWT configuration
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=int(os.getenv('ACCESS_TOKEN_LIFETIME', 7))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=int(os.getenv('REFRESH_TOKEN_LIFETIME', 24))),
+    "ALGORITHM": os.getenv('JWT_ALGORITHM', 'HS256'),
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": (os.getenv('AUTH_HEADER_TYPE', 'Bearer'),),
+}
+
+# Celery config
+CELERY_BROKER_URL = 'redis://redis:6379/0'  # URL for the broker (Redis)
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']  # Accept JSON format for tasks
+CELERY_TASK_SERIALIZER = 'json'  # Serialize tasks in JSON format
+CELERY_RESULT_SERIALIZER = 'json'  # Serialize results in JSON format
+CELERY_TIMEZONE = 'Africa/Nairobi'  # Timezone for scheduling tasks
+CELERY_TASK_TRACK_STARTED = True  # Track task start times
+CELERY_TASK_TIME_LIMIT = 30 * 60  # Set global time limit for tasks
