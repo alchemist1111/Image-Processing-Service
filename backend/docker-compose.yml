@@ -1,0 +1,90 @@
+services:
+  web:
+    build: ./backend
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+            python manage.py makemigrations &&
+            python manage.py migrate &&
+            gunicorn image_service.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - /app/staticfiles
+      - ./media:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - backend-network
+    user: appuser  # Run as non-root user
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+    networks:
+      - backend-network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  celery:
+    build: ./backend
+    command: celery -A image_service.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    networks:
+      - backend-network
+    user: appuser  # Run as non-root user
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+volumes:
+  postgres_data:
+
+networks:
+  backend-network:
+    driver: bridge
