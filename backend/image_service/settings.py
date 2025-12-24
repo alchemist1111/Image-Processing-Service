@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Local apps
+    'users',
     'image_service',
     'image_management',
     'transformations',
@@ -156,9 +157,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Additional static files directory (for development)
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # Optional for custom static files during development
-]
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static'),  # Optional for custom static files during development
+# ]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -190,6 +191,7 @@ SIMPLE_JWT = {
     "ALGORITHM": os.getenv('JWT_ALGORITHM', 'HS256'),
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": (os.getenv('AUTH_HEADER_TYPE', 'Bearer'),),
+    "USER_ID_FIELD": "user_id",
 }
 
 # Celery config

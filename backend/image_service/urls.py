@@ -23,6 +23,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('users/auth/', include('users.urls')),
     
     # Swagger Docs
     path('swagger.<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
