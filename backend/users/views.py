@@ -8,6 +8,7 @@ from .serializers import UserSerializer, UserRegistrationSerializer
 from rest_framework.exceptions import ValidationError
 from .tokens import generate_tokens, blacklist_token
 from django.contrib.auth import authenticate
+from .pagination import CustomPagination
 import logging
 from typing import Any
 
@@ -141,4 +142,133 @@ class UserLoginView(APIView):
             }
         } 
         logger.debug(f"Login response data for user {email}: {response_data}")
-        return Response(response_data, status=status.HTTP_200_OK)        
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+
+# User Logout View
+class UserLogoutView(APIView):
+    pass
+
+
+# User Retrieval, update, and deletion View
+class UserDetailView(APIView):
+    """API view for retrieving, updating, and deleting user details."""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+    
+    def get(self, request):
+        """Retrieve user details for the authenticated user."""
+        try:
+            user = request.user # Get the currently authenticated user
+            
+            serializer = self.serializer_class(user) # Serialize the user data
+            logger.info(f"Retrieved details for user: {user.email}")
+            
+            response_data = {
+                'status': 'success',
+                'message': 'User details retrieved successfully.',
+                'data': serializer.data
+            }
+            logger.debug(f"User details response data for {user.email}: {response_data}")
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Error retrieving user details: {str(e)}")
+            response_data = {
+                'status': 'error',
+                'message': 'An error occurred while retrieving user details.'
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def put(self, request, *args, **kwargs):
+        """Update user details."""
+        user = request.user  # Get the currently authenticated user
+        serializer = self.serializer_class(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save() # Save the updated user data
+            logger.info(f"Updated details for user: {user.email}")
+            
+            message = {
+                'status': 'success',
+                'message': 'User details updated successfully.',
+                'data': serializer.data
+            }
+            logger.debug(f"User update response data for {user.email}: {message}")
+            return Response(message, status=status.HTTP_200_OK)
+        
+        logger.warning(f"User update failed for {user.email} due to validation errors: {serializer.errors}")
+        message = {
+            'status': 'error',
+            'message': 'Failed to update user details.',
+            'errors': serializer.errors
+        }
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    def delete(self, request, *args, **kwargs):
+        """Delete the user."""
+        user = request.user # Get the currently authenticated user
+        
+        try:
+            user.delete() # Delete the user
+            logger.info(f"Deleted user: {user.email}")
+            
+            message= {
+                'status': 'success',
+                'message': 'User deleted successfully.'
+            } 
+            logger.debug(f"User deletion response data for {user.email}: {message}")
+            return Response(message, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            logger.warning(f"Attempted to delete non-existent user: {user.email}")
+            
+            message = {
+                'status': 'error',
+                'message': 'User does not exist.'
+            }
+            logger.debug(f"User deletion response data for non-existent user {user.email}: {message}")
+            return Response(message, status=status.HTTP_404_NOT_FOUND)   
+
+
+# User List View
+class UserListView(APIView):
+    """API view for listing all registered users."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = UserSerializer
+    pagination_class = CustomPagination
+    
+    def get(self, request):
+        """Retrieve a paginated list of all users."""
+        try:
+            users = User.objects.all() # Get all users
+            
+            # An instance of the custom pagination class
+            paginator = CustomPagination()
+            
+            # Paginate the queryset and get the serialized data for the current page
+            page = paginator.paginate_queryset(users, request)
+            
+            if page is not None:
+                serializer = self.serializer_class(page, many=True) # Serialize the user data
+                return paginator.get_paginated_response(serializer.data) # Return the custom paginated response
+            
+            # If the queryset is smaller than a page, serialize all users
+            serializer = self.serializer_class(users, many=True)
+            logger.info(f"Retrieved list of all users. Total users: {users.count()}")
+            response_data = {
+                'status': 'success',
+                'message': 'User list retrieved successfully.',
+                'data': serializer.data
+            }
+            logger.debug(f"User list response data: {response_data}")
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Error retrieving user list: {str(e)}")
+            response_data = {
+                'status': 'error',
+                'message': 'An error occurred while retrieving user list.'
+            }
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+                    
