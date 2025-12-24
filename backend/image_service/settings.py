@@ -176,12 +176,17 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 # DRF config
 REST_FRAMEWORK = {
+    # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    # Permission: Only authenticated users can access by default
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Pagination settings
+    'DEFAULT_PAGINATION_CLASS': 'users.pagination.CustomPagination',  # Custom pagination
+    'PAGE_SIZE': 20,  # Default page size for pagination
 }
 
 # Simple JWT configuration
