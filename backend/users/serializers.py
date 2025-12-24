@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['user_id', 'email', 'first_name', 'last_name', 'created_at', 'updated_at', 'old_password', 'new_password', 'confirm_new_password']
+        fields = ['user_id', 'first_name', 'last_name', 'email', 'created_at', 'updated_at', 'old_password', 'new_password', 'confirm_new_password']
         read_only_fields = ['user_id', 'created_at', 'updated_at']
         
     def validate_old_password(self, value):
@@ -67,7 +67,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password'] 
+        fields = ['first_name', 'last_name', 'email', 'password'] 
     
     def validate_email(self, value):
         """Custom email validation"""
