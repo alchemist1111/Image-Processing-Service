@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     
     # Local apps
     'users',
-    'image_service',
     'image_management',
     'transformations',
     
@@ -62,6 +61,8 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'drf_yasg',
+    'cloudinary',
+    'cloudinary_storage',
     
 ]
 
@@ -171,6 +172,9 @@ AUTH_USER_MODEL = "users.User"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Default storage for Django files (e.g., images)
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 # CORS config
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
@@ -208,3 +212,16 @@ CELERY_RESULT_SERIALIZER = 'json'  # Serialize results in JSON format
 CELERY_TIMEZONE = 'Africa/Nairobi'  # Timezone for scheduling tasks
 CELERY_TASK_TRACK_STARTED = True  # Track task start times
 CELERY_TASK_TIME_LIMIT = 30 * 60  # Set global time limit for tasks
+
+# Cloudinary configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUD_NAME'),
+    'API_KEY': os.getenv('API_KEY'),
+    'API_SECRET': os.getenv('API_SECRET'),
+}
+
+# print('Cloudinary config:', {
+#     'CLOUD_NAME': os.getenv('CLOUD_NAME'),
+#     'API_KEY': os.getenv('API_KEY'),
+#     'API_SECRET': os.getenv('API_SECRET'),
+# })
