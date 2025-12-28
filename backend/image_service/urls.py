@@ -20,10 +20,12 @@ from .swagger import schema_view
 from django.conf import settings
 from django.conf.urls.static import static
 
+api = 'api/v1/'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/auth/', include('users.urls')),
+    path(api, include('image_management.urls')),
     
     # Swagger Docs
     path('swagger.<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
